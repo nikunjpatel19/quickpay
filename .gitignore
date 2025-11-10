@@ -1,0 +1,37 @@
+# Global
+.DS_Store
+*.iml
+.idea/
+.gradle/
+build/
+out/
+.local/
+*.log
+
+# Android
+android/.cxx/
+android/.idea/
+android/.gradle/
+android/build/
+android/**/build/
+android/app/build/
+android/local.properties
+android/captures/
+android/*.keystore
+android/*.jks
+
+# Ktor backend
+backend/.idea/
+backend/.gradle/
+backend/build/
+backend/**/build/
+
+# OS/Editors
+*.swp
+*.swo
+Thumbs.db
+
+# Env/Secrets
+*.env
+*.env.*
+.envrc
