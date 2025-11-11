@@ -26,6 +26,10 @@ backend/.gradle/
 backend/build/
 backend/**/build/
 
+# backend compiled
+backend/bin/
+backend/build/
+
 # OS/Editors
 *.swp
 *.swo
