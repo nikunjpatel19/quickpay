@@ -20,4 +20,21 @@ dependencies {
     implementation(libs.logback.classic)
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
+
+    // Exposed + Postgres
+    implementation("org.jetbrains.exposed:exposed-core:0.56.0")
+    implementation("org.jetbrains.exposed:exposed-dao:0.56.0")
+    implementation("org.jetbrains.exposed:exposed-jdbc:0.56.0")
+    implementation("org.jetbrains.exposed:exposed-kotlin-datetime:0.56.0")
+    implementation("org.postgresql:postgresql:42.7.4")
+
+    // HikariCP
+    implementation("com.zaxxer:HikariCP:5.1.0")
+
+    // Flyway for migrations
+    implementation("org.flywaydb:flyway-core:10.17.0")
+    implementation("org.flywaydb:flyway-database-postgresql:10.17.0")
+
+    // Logging
+    implementation("ch.qos.logback:logback-classic:1.5.12")
 }

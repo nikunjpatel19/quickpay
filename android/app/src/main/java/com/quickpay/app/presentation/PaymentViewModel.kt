@@ -3,16 +3,14 @@ package com.quickpay.app.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.quickpay.app.data.remote.ApiModule
-import com.quickpay.app.data.remote.CreateLinkReq
-import com.quickpay.app.data.remote.CreateLinkRes
-import com.quickpay.app.data.remote.OrderDto
+import com.quickpay.app.data.remote.dto.CreateLinkReq
+import com.quickpay.app.data.remote.dto.OrderDto
+import com.quickpay.app.data.remote.dto.PaymentLinkDto
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import retrofit2.HttpException
-import java.io.IOException
 
 data class UiState(
     val amountText: String = "",
@@ -22,7 +20,7 @@ data class UiState(
     val error: String? = null,
     val orderId: String? = null,
     val checkoutUrl: String? = null,
-    val orderStatus: String? = null // pending|succeeded|failed
+    val orderStatus: String? = null      // CREATED | CAPTURED | FAILED ...
 )
 
 class PaymentViewModel : ViewModel() {
@@ -36,53 +34,55 @@ class PaymentViewModel : ViewModel() {
     fun onCurrencyChanged(t: String) { _state.value = _state.value.copy(currency = t.uppercase()) }
 
     fun createLink() {
-        val cents = _state.value.amountText.toIntOrNull() ?: 0
-        if (cents <= 0) {
+        val cents = _state.value.amountText.toLongOrNull() ?: 0L
+        if (cents <= 0L) {
             _state.value = _state.value.copy(error = "Enter amount in cents (e.g., 999 for $9.99)")
             return
         }
+
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             try {
-                val res = ApiModule.api.createLink(
-                    CreateLinkReq(amountCents = cents, currency = _state.value.currency, description = _state.value.description)
-                )
-                if (res.isSuccessful) {
-                    val body: CreateLinkRes? = res.body()
-                    _state.value = _state.value.copy(
-                        isLoading = false,
-                        orderId = body?.orderId,
-                        checkoutUrl = body?.url,
-                        orderStatus = "pending"
+                val link: PaymentLinkDto = ApiModule.api.createLink(
+                    CreateLinkReq(
+                        amountCents = cents,
+                        currency = _state.value.currency,
+                        description = _state.value.description.ifBlank { null }
                     )
-                    // start polling
-                    startPolling()
-                } else {
-                    _state.value = _state.value.copy(isLoading = false, error = "Create link failed: ${res.code()}")
-                }
-            } catch (e: IOException) {
-                _state.value = _state.value.copy(isLoading = false, error = "Network error")
-            } catch (e: HttpException) {
-                _state.value = _state.value.copy(isLoading = false, error = "HTTP ${e.code()}")
+                )
+
+                // orderId == link.id (we create an order with same id on server)
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    orderId = link.id,
+                    checkoutUrl = link.checkoutUrl,         // may be null until Finix
+                    orderStatus = "CREATED"                  // initial UI status
+                )
+
+                startPolling(link.id)
+
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Request failed")
             }
         }
     }
 
-    private fun startPolling() {
+    private fun startPolling(id: String) {
         pollJob?.cancel()
-        val id = _state.value.orderId ?: return
         pollJob = viewModelScope.launch {
-            repeat(120) { // ~10 minutes max
+            repeat(120) { // ~6 minutes at 3s each
                 try {
-                    val res = ApiModule.api.getOrder(id)
-                    if (res.isSuccessful) {
-                        val order: OrderDto? = res.body()
-                        _state.value = _state.value.copy(orderStatus = order?.status)
-                        if (order?.status == "succeeded" || order?.status == "failed") {
-                            return@launch
-                        }
+                    val order: OrderDto = ApiModule.api.getOrder(id)
+                    val uiStatus = order.status
+                    _state.value = _state.value.copy(orderStatus = uiStatus)
+
+                    // consider CAPTURED == success; FAILED == failure
+                    if (uiStatus.equals("CAPTURED", true) ||
+                        uiStatus.equals("FAILED", true)) {
+                        return@launch
                     }
-                } catch (_: Throwable) { /* ignore and keep polling */ }
+                } catch (_: Throwable) { /* keep polling */ }
+
                 delay(3000)
             }
         }
