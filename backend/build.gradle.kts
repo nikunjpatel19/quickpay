@@ -36,5 +36,17 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql:10.17.0")
 
     // Logging
-    implementation("ch.qos.logback:logback-classic:1.5.12")
+    implementation("ch.qos.logback:logback-classic:1.5.13")
+
+    // Ktor HTTP client
+    implementation("io.ktor:ktor-client-core:2.3.7")
+    implementation("io.ktor:ktor-client-cio:2.3.7")
+
+    // JSON support
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
+
+    // Logging plugin
+    implementation("io.ktor:ktor-client-logging:2.3.7")
+
 }
