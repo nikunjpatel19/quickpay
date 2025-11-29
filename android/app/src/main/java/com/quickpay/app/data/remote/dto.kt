@@ -10,6 +10,13 @@ data class CreateLinkReq(
 )
 
 @JsonClass(generateAdapter = true)
+data class CreateLinkRes(
+    val orderId: String,
+    val url: String,
+    val status: String
+)
+
+@JsonClass(generateAdapter = true)
 data class PaymentLinkDto(
     val id: String,
     val amountCents: Long,

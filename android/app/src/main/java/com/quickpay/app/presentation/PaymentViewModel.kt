@@ -43,7 +43,7 @@ class PaymentViewModel : ViewModel() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             try {
-                val link: PaymentLinkDto = ApiModule.api.createLink(
+                val response = ApiModule.api.createLink(
                     CreateLinkReq(
                         amountCents = cents,
                         currency = _state.value.currency,
@@ -51,16 +51,24 @@ class PaymentViewModel : ViewModel() {
                     )
                 )
 
-                // orderId == link.id (we create an order with same id on server)
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    orderId = link.id,
-                    checkoutUrl = link.checkoutUrl,         // may be null until Finix
-                    orderStatus = "CREATED"                  // initial UI status
-                )
+                if (response.isSuccessful) {
+                    val link = response.body()!!
 
-                startPolling(link.id)
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        orderId = link.orderId,
+                        checkoutUrl = link.url,
+                        orderStatus = link.status
+                    )
 
+                    startPolling(link.orderId)
+
+                } else {
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        error = "Failed: ${response.code()}"
+                    )
+                }
             } catch (e: Exception) {
                 _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Request failed")
             }
