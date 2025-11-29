@@ -5,6 +5,9 @@ import backend.models.CreateLinkRes
 import backend.repo.OrderRepository
 import backend.repo.PaymentLinkRepository
 import backend.finix.FinixPaymentLinksClient
+import backend.finix.FinixWebhookHandler
+import backend.finix.FinixWebhookEvent
+import backend.store.WebhookEvents
 
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -13,6 +16,15 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import java.util.UUID
 import kotlinx.datetime.Clock
+import kotlinx.datetime.toJavaInstant
+import kotlinx.serialization.json.Json
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.sql.transactions.transaction
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+
+private val webhookJson = Json { ignoreUnknownKeys = true }
 
 fun Application.registerRoutes(
     paymentLinks: PaymentLinkRepository,
@@ -35,7 +47,8 @@ fun Application.registerRoutes(
                 FinixPaymentLinksClient.createPaymentLink(
                     amountCents = body.amountCents,
                     currency = body.currency,
-                    description = body.description
+                    description = body.description,
+                    tags = mapOf("order_id" to internalId)
                 )
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -93,6 +106,60 @@ fun Application.registerRoutes(
 
             val ok = orders.markDevStatus(id, status)
             if (ok) call.respond(HttpStatusCode.OK) else call.respond(HttpStatusCode.NotFound)
+        }
+
+        post("/finix/webhook") {
+
+            val rawBody = call.receiveText()
+
+            // Finix hits this with an empty body when it validates the URL
+            if (rawBody.isBlank()) {
+                println("===> Finix validation ping (empty body)")
+                return@post call.respond(HttpStatusCode.OK)
+            }
+
+            val now = Clock.System.now()
+
+            // Try to decode webhook
+            val event = try {
+                webhookJson.decodeFromString(FinixWebhookEvent.serializer(), rawBody)
+            } catch (e: Exception) {
+                e.printStackTrace()
+
+                // Store invalid payload for debugging, but still return 200
+                transaction {
+                    WebhookEvents.insert {
+                        it[eventType]  = "invalid"
+                        it[payload]    = rawBody
+                        it[receivedAt] = OffsetDateTime.ofInstant(now.toJavaInstant(), ZoneOffset.UTC)
+                        it[processed]  = false
+                    }
+                }
+
+                return@post call.respond(HttpStatusCode.OK)
+            }
+
+            // Store valid payload
+            val rowId = transaction {
+                WebhookEvents.insert {
+                    it[eventType]  = "${event.entity}:${event.type}"
+                    it[payload]    = rawBody
+                    it[receivedAt] = OffsetDateTime.ofInstant(now.toJavaInstant(), ZoneOffset.UTC)
+                    it[processed]  = false
+                } get WebhookEvents.id
+            }
+
+            // Apply business logic
+            FinixWebhookHandler.handle(event, orders, paymentLinks)
+
+            // Mark as processed
+            transaction {
+                WebhookEvents.update({ WebhookEvents.id eq rowId }) {
+                    it[processed] = true
+                }
+            }
+
+            call.respond(HttpStatusCode.OK)
         }
     }
 }
