@@ -1,13 +1,12 @@
-# QuickPay — Android + Backend Monorepo
+# QuickPay • Android and Backend Monorepo
 
-Full stack demo payment flow app inspired by Finix / Stripe concepts.
-
-This monorepo contains **both** the Android client and Ktor backend server.
+Full stack payment flow demo inspired by Finix and Stripe concepts.  
+The repository contains the Android client and the Ktor backend that work together to simulate a merchant payment process.
 
 ```
 quickpay/
- ├── android/        ← Android app (Jetpack Compose / Kotlin)
- ├── backend/        ← Ktor backend server
+ ├── android/        ← Android app (Jetpack Compose, Kotlin, MVVM)
+ ├── backend/        ← Ktor backend server (Kotlin)
  └── README.md
 ```
 
@@ -16,18 +15,20 @@ quickpay/
 ## Tech Stack
 
 ### Android
-- Kotlin
-- Jetpack Compose
-- MVVM (StateFlow + ViewModel)
-- Retrofit + Moshi
-- Material 3 UI
-- Custom Tabs checkout launch
+- Kotlin  
+- Jetpack Compose (Material 3)  
+- MVVM with StateFlow and ViewModel  
+- Retrofit with Moshi  
+- Navigation Component  
+- Custom Tabs checkout launch  
+- Basic unit tests and instrumentation tests  
 
 ### Backend
-- Kotlin
-- Ktor server
-- In-memory order store (mock simulation)
-- REST endpoints for link creation + order status polling
+- Kotlin  
+- Ktor server  
+- Exposed ORM with Postgres (in progress)  
+- REST endpoints for payment link creation and order status  
+- Webhook style simulation for success and failure callbacks  
 
 ---
 
@@ -35,60 +36,60 @@ quickpay/
 
 | Flow Step | Description |
 |----------|-------------|
-| Create Payment Link | Enter amount (in cents), currency + description |
-| Launch Checkout URL | Opens mock checkout page (CustomTab) |
-| Poll Status | App auto polls backend until order `succeeded` or `failed` |
-| Dev Mode Webhook Simulation | Backend endpoint to manually mark success/failed |
+| Create Payment Link | User enters amount, currency and description and the backend returns a hosted link. |
+| Checkout URL | The link opens a hosted checkout page in a browser tab or Custom Tab. |
+| Status Polling | The Android app polls the backend until the order becomes succeeded or failed. |
+| Developer Webhook Simulation | Backend exposes endpoints that simulate webhook updates to test the full payment lifecycle. |
 
 ---
 
-## Running Backend Locally
+## Running the Backend
 
 ```bash
 cd backend
 ./gradlew run
 ```
-Backend responds at: `http://127.0.0.1:8080`
 
-### Dev Test (simulate payment result)
+Backend will respond at:  
+`http://127.0.0.1:8080`
+
+Webhook simulation example:
+
 ```bash
 curl -X POST "http://127.0.0.1:8080/v1/dev/orders/{id}/mark?status=succeeded"
 ```
 
 ---
 
-## Running Android App
+## Running the Android App
 
-Android emulator connects to host using:
+The Android emulator uses the special host mapping:
+
 ```
 BASE_URL = http://10.0.2.2:8080/
 ```
-Open `/android` in Android Studio → Run app.
+
+Open the `android` folder in Android Studio and run the app.
 
 ---
 
-## Repo / Monorepo Workflow
+## Repository Workflow
 
-Single Git repository at **root**. You can open Android + Backend in separate IDE windows:
+Single Git repository at the root. Android and backend can be opened in separate IDE windows.
 
-| IDE | Open path | Notes |
-|-----|-----------|-------|
-| Android Studio | `quickpay/android` | normal Android project |
-| IntelliJ IDEA  | `quickpay/backend` | normal Ktor project |
+| IDE | Path | Notes |
+|-----|------|-------|
+| Android Studio | quickpay/android | Android module |
+| IntelliJ IDEA | quickpay/backend | Ktor backend |
 
-Both IDEs commit/push to the **same** root repo (ensure only one `.git/` at the root).
+Commit examples:
 
-### Example commits
 ```bash
-# Android only
 git add android/
-git commit -m "android: UI + create link flow"
-git push
+git commit -m "android: add create link screen and polling logic"
 
-# Backend only
 git add backend/
-git commit -m "backend: /v1/links + order polling"
-git push
+git commit -m "backend: create link and order status endpoints"
 ```
 
 ---
@@ -97,11 +98,12 @@ git push
 
 | Method | Path | Purpose |
 |--------|------|----------|
-| POST | /v1/links | Create payment link |
+| POST | /v1/links | Create a payment link |
 | GET | /v1/orders/{id} | Get payment order status |
-| POST | /v1/dev/orders/{id}/mark?status=xxx | Dev tool to mark succeeded / failed |
+| POST | /v1/dev/orders/{id}/mark?status=xxx | Developer tool for success or failure |
 
-Sample JSON body:
+Sample request:
+
 ```json
 {
   "amountCents": 999,
@@ -112,11 +114,11 @@ Sample JSON body:
 
 ---
 
-## Next Roadmap
+## Roadmap
 
-- Web checkout UI for real simulation
-- Finix/Stripe real integration
-- Saving history & analytics
-- Auth + Merchant management
-
----
+- Finix Checkout Pages integration  
+- Complete webhook handling for state transitions  
+- Merchant dashboard and analytics  
+- Postgres storage for orders and webhooks  
+- Google Pay integration  
+- QR code sharing for hosted checkout  
