@@ -88,6 +88,16 @@ fun Application.registerRoutes(
         }
 
         /**
+         * GET /v1/orders
+         * Returns recent orders list for history screen
+         */
+        get("/orders") {
+            val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 20
+            val ordersList = orders.listRecent(limit.coerceIn(1, 100))
+            call.respond(ordersList)
+        }
+
+        /**
          * GET /v1/orders/{id}
          * Android polls this to check success/failure
          */

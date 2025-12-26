@@ -42,4 +42,22 @@ class OrderRepositoryExposed : OrderRepository {
             }
             get(orderId)!!
         }
+
+    // New
+    override fun listRecent(limit: Int): List<OrderDto> = transaction {
+        Orders
+            .selectAll()
+            // if you have a createdAt column, prefer ordering by that instead of id
+            .orderBy(Orders.id to SortOrder.DESC)
+            .limit(limit)
+            .map {
+                OrderDto(
+                    id = it[Orders.id],
+                    linkId = it[Orders.linkId],
+                    status = it[Orders.status],
+                    amountCents = it[Orders.amountCents],
+                    currency = it[Orders.currency]
+                )
+            }
+    }
 }
