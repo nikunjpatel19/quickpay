@@ -19,4 +19,9 @@ interface QuickPayApi {
         @Path("id") id: String,
         @Query("status") status: String
     )
+    // New: list recent orders
+    @GET("v1/orders")
+    suspend fun getOrders(
+        @Query("limit") limit: Int = 20
+    ): List<OrderDto>
 }

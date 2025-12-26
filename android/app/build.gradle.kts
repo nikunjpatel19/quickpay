@@ -71,4 +71,11 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:${libs.versions.espressoCore.get()}")
 
     debugImplementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    implementation("com.google.zxing:core:3.5.1")
+
+    dependencies {
+        implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
+    }
+
 }

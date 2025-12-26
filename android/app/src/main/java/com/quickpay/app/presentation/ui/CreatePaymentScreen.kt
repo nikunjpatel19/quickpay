@@ -1,17 +1,11 @@
 package com.quickpay.app.presentation.ui
 
-import android.content.Intent
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
-import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.quickpay.app.presentation.PaymentViewModel
@@ -19,14 +13,6 @@ import com.quickpay.app.presentation.PaymentViewModel
 @Composable
 fun CreatePaymentScreen(vm: PaymentViewModel) {
     val state by vm.state.collectAsState()
-    val ctx = LocalContext.current
-
-    // open Custom Tab when checkoutUrl appears
-    LaunchedEffect(state.checkoutUrl) {
-        val url = state.checkoutUrl ?: return@LaunchedEffect
-        val cti = CustomTabsIntent.Builder().build()
-        cti.launchUrl(ctx, Uri.parse(url))
-    }
 
     Column(
         Modifier
@@ -43,34 +29,69 @@ fun CreatePaymentScreen(vm: PaymentViewModel) {
             onValueChange = vm::onAmountChanged,
             label = { Text("Amount (cents)") },
             keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-            singleLine = true
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
         )
+
         Spacer(Modifier.height(8.dp))
+
         OutlinedTextField(
             value = state.description,
             onValueChange = vm::onDescChanged,
             label = { Text("Description") },
-            singleLine = true
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
         )
+
         Spacer(Modifier.height(8.dp))
+
         OutlinedTextField(
             value = state.currency,
             onValueChange = vm::onCurrencyChanged,
             label = { Text("Currency (USD/CAD)") },
-            singleLine = true
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(Modifier.height(16.dp))
+
         Button(
             onClick = { vm.createLink() },
-            enabled = !state.isLoading
-        ) { Text(if (state.isLoading) "Creating..." else "Create Link") }
+            enabled = !state.isLoading,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(if (state.isLoading) "Creating..." else "Create Link")
+        }
 
         Spacer(Modifier.height(24.dp))
+
+        // Show order info and QR once link is created
         if (state.orderId != null) {
             Text("Order: ${state.orderId}")
             Text("Status: ${state.orderStatus ?: "-"}")
-            Text("Checkout: ${state.checkoutUrl ?: "-"}")
+        }
+
+        val checkoutUrl = state.checkoutUrl
+
+        if (checkoutUrl != null) {
+            Spacer(Modifier.height(16.dp))
+
+            Text(
+                "Show this QR to your customer",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                QrCode(
+                    data = checkoutUrl,
+                    size = 220.dp
+                )
+            }
         }
 
         if (state.error != null) {
