@@ -47,6 +47,9 @@ object DatabaseFactory {
             .baselineOnMigrate(false)
             .load()
 
+        log.info("Flyway locations = {}", flyway.configuration.locations.joinToString())
+        log.info("Pending = {}", flyway.info().pending().joinToString { it.version.toString() + ":" + it.description })
+
         val result = flyway.migrate()
         log.info("Flyway migration result: $result")
 
