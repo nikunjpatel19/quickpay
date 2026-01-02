@@ -30,10 +30,20 @@ object DatabaseFactory {
 
         val dataSource = HikariDataSource(hikari)
 
-        val flywayLocations = conf.getString("flyway.locations")
+//        val flywayLocations = conf.getString("flyway.locations")
+//        val flyway = Flyway.configure()
+//            .dataSource(dataSource)
+//            .locations(flywayLocations)
+//            .baselineOnMigrate(true)
+//            .load()
+
+        val cl = Thread.currentThread().contextClassLoader
+        val res = cl.getResource("db/migration/V1__init_core.sql")
+        log.info("Migration resource visible? ${res != null} -> $res")
+
         val flyway = Flyway.configure()
             .dataSource(dataSource)
-            .locations(flywayLocations)
+            .locations("classpath:db/migration")
             .baselineOnMigrate(true)
             .load()
 
