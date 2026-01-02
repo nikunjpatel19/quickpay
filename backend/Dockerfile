@@ -1,7 +1,7 @@
 FROM gradle:8-jdk17 AS build
 WORKDIR /app
 COPY . .
-RUN ./gradlew buildFatJar --no-daemon
+RUN chmod +x ./gradlew && ./gradlew buildFatJar --no-daemon
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
