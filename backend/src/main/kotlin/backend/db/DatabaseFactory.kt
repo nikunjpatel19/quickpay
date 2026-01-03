@@ -38,7 +38,7 @@ object DatabaseFactory {
 //            .load()
 
         val cl = Thread.currentThread().contextClassLoader
-        val res = cl.getResource("db/migration/V1_0__init_core.sql")
+        val res = cl.getResource("db/migration/V1__init_core.sql")
         log.info("Migration resource visible? ${res != null} -> $res")
 
 //        val flyway = Flyway.configure()
@@ -56,6 +56,7 @@ object DatabaseFactory {
         val flyway = Flyway.configure()
             .dataSource(dataSource)
             .locations(flywayLocations)
+            .validateMigrationNaming(true)
             .baselineOnMigrate(false)
             .load()
 
