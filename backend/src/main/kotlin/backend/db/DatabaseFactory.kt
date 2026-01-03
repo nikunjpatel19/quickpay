@@ -30,42 +30,22 @@ object DatabaseFactory {
 
         val dataSource = HikariDataSource(hikari)
 
-//        val flywayLocations = conf.getString("flyway.locations")
-//        val flyway = Flyway.configure()
-//            .dataSource(dataSource)
-//            .locations(flywayLocations)
-//            .baselineOnMigrate(true)
-//            .load()
-
-        val cl = Thread.currentThread().contextClassLoader
-        val res = cl.getResource("db/migration/V1.0__init_core.sql")
-        log.info("Migration resource visible? ${res != null} -> $res")
-
-//        val flyway = Flyway.configure()
-//            .dataSource(dataSource)
-//            .locations(flywayLocations)
-//            .sqlMigrationPrefix("V")
-//            .sqlMigrationSeparator("__")
-//            .sqlMigrationSuffixes(".sql")
-//            .baselineOnMigrate(true)
-//            .load()
-//
-//        val result = flyway.migrate()
-
-        //temp
-        val flywayLocations = conf.getString("flyway.locations")
-
         val flyway = Flyway.configure()
             .dataSource(dataSource)
-            .locations(flywayLocations)
+            .locations("classpath:db/migration")
             .sqlMigrationPrefix("V")
             .sqlMigrationSeparator("__")
             .sqlMigrationSuffixes(".sql")
+            .validateMigrationNaming(true)
             .baselineOnMigrate(true)
             .load()
 
         val result = flyway.migrate()
-        log.info("Flyway applied: {}, success: {}", result.migrationsExecuted, result.success)
+        log.info(
+            "Flyway applied: {}, success: {}",
+            result.migrationsExecuted,
+            result.success
+        )
 
         val db = Database.connect(dataSource)
         log.info("Connected to Postgres")
@@ -73,7 +53,7 @@ object DatabaseFactory {
     }
 
     private fun resolveDb(conf: Config): DbResolved {
-        // Render-style single URL
+        // Render-style DATABASE_URL
         val databaseUrl = System.getenv("DATABASE_URL")?.takeIf { it.isNotBlank() }
         if (databaseUrl != null) {
             val uri = URI(databaseUrl)
@@ -82,27 +62,33 @@ object DatabaseFactory {
             val dbName = uri.path.removePrefix("/")
 
             val userInfo = uri.userInfo ?: error("DATABASE_URL missing user:pass")
-            val (user, pass) = userInfo.split(":", limit = 2).let { it[0] to (it.getOrNull(1) ?: "") }
+            val (user, pass) = userInfo.split(":", limit = 2)
+                .let { it[0] to (it.getOrNull(1) ?: "") }
 
             val jdbc = "jdbc:postgresql://$host:$port/$dbName?sslmode=require"
-
             val maxPool = conf.getIntOrDefault("db.maximumPoolSize", 10)
+
             return DbResolved(jdbc, user, pass, maxPool)
         }
 
-        // Existing DB_* path (from application.conf)
-        if (conf.hasPath("db.jdbcUrl") && conf.hasPath("db.username") && conf.hasPath("db.password")) {
+        // application.conf DB config
+        if (conf.hasPath("db.jdbcUrl")) {
             val dbConf = conf.getConfig("db")
             val jdbcUrl = dbConf.getString("jdbcUrl")
             val username = dbConf.getString("username")
             val password = dbConf.getString("password")
-            val maxPool = if (dbConf.hasPath("maximumPoolSize")) dbConf.getInt("maximumPoolSize") else 10
+            val maxPool = dbConf.getIntOrDefault("maximumPoolSize", 10)
+
             return DbResolved(jdbcUrl, username, password, maxPool)
         }
 
-        // Local defaults (matches your docker-compose.yml)
-        val jdbc = "jdbc:postgresql://localhost:5432/quickpay"
-        return DbResolved(jdbc, "quickpay", "quickpay", 10)
+        // Local fallback
+        return DbResolved(
+            "jdbc:postgresql://localhost:5432/quickpay",
+            "quickpay",
+            "quickpay",
+            10
+        )
     }
 
     private data class DbResolved(
@@ -113,5 +99,5 @@ object DatabaseFactory {
     )
 
     private fun Config.getIntOrDefault(path: String, defaultValue: Int): Int =
-        if (this.hasPath(path)) this.getInt(path) else defaultValue
+        if (hasPath(path)) getInt(path) else defaultValue
 }
