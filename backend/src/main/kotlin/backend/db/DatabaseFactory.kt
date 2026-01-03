@@ -55,13 +55,17 @@ object DatabaseFactory {
         //temp
         val flyway = Flyway.configure()
             .dataSource(dataSource)
-            .locations(flywayLocations)
-            .validateMigrationNaming(true)
-            .baselineOnMigrate(false)
+            .locations("classpath:db/migration")
+            .sqlMigrationPrefix("V")
+            .sqlMigrationSeparator("__")
+            .sqlMigrationSuffixes(".sql")
+            .validateMigrationNaming(false) // <- important
             .load()
 
-        val result = flyway.migrate()
-        log.info("Flyway migration result: {}", result)
+        flyway.migrate()
+
+        log.info("Flyway version: {}", Flyway::class.java.`package`.implementationVersion)
+        log.info("Flyway locations used: {}", "classpath:db/migration")
 
         val db = Database.connect(dataSource)
         log.info("Connected to Postgres")
