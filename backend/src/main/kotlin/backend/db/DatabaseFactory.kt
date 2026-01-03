@@ -30,7 +30,7 @@ object DatabaseFactory {
 
         val dataSource = HikariDataSource(hikari)
 
-//        val flywayLocations = conf.getString("flyway.locations")
+        val flywayLocations = conf.getString("flyway.locations")
 //        val flyway = Flyway.configure()
 //            .dataSource(dataSource)
 //            .locations(flywayLocations)
@@ -43,22 +43,16 @@ object DatabaseFactory {
 
         val flyway = Flyway.configure()
             .dataSource(dataSource)
-            .locations("classpath:db/migration")
-            .validateMigrationNaming(true)
+            .locations(flywayLocations)
+            .sqlMigrationPrefix("V")
+            .sqlMigrationSeparator("__")
+            .sqlMigrationSuffixes(".sql")
+            .baselineOnMigrate(true)
             .load()
 
-        log.info(
-            "Flyway naming: prefix={}, separator={}, suffixes={}",
-            flyway.configuration.sqlMigrationPrefix,
-            flyway.configuration.sqlMigrationSeparator,
-            flyway.configuration.sqlMigrationSuffixes.joinToString()
-        )
-
-        log.info("Flyway locations = {}", flyway.configuration.locations.joinToString())
-        log.info("Pending = {}", flyway.info().pending().joinToString { it.version.toString() + ":" + it.description })
-
         val result = flyway.migrate()
-        log.info("Flyway migration result: $result")
+        log.info("Flyway migration result: {}", result)
+
 
         val db = Database.connect(dataSource)
         log.info("Connected to Postgres")
