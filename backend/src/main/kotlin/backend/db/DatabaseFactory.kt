@@ -38,7 +38,7 @@ object DatabaseFactory {
 //            .load()
 
         val cl = Thread.currentThread().contextClassLoader
-        val res = cl.getResource("db/migration/R__init_core.sql")
+        val res = cl.getResource("db/migration/V1_0__init_core.sql")
         log.info("Migration resource visible? ${res != null} -> $res")
 
 //        val flyway = Flyway.configure()
@@ -56,7 +56,7 @@ object DatabaseFactory {
         val flyway = Flyway.configure()
             .dataSource(dataSource)
             .locations(flywayLocations)
-            .baselineOnMigrate(true)
+            .baselineOnMigrate(false)
             .load()
 
         val result = flyway.migrate()
@@ -79,7 +79,7 @@ object DatabaseFactory {
             val userInfo = uri.userInfo ?: error("DATABASE_URL missing user:pass")
             val (user, pass) = userInfo.split(":", limit = 2).let { it[0] to (it.getOrNull(1) ?: "") }
 
-            val jdbc = "jdbc:postgresql://$host:$port/$dbName"
+            val jdbc = "jdbc:postgresql://$host:$port/$dbName?sslmode=require"
 
             val maxPool = conf.getIntOrDefault("db.maximumPoolSize", 10)
             return DbResolved(jdbc, user, pass, maxPool)
