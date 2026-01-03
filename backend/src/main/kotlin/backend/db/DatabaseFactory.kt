@@ -47,6 +47,13 @@ object DatabaseFactory {
             .validateMigrationNaming(true)
             .load()
 
+        log.info(
+            "Flyway naming: prefix={}, separator={}, suffixes={}",
+            flyway.configuration.sqlMigrationPrefix,
+            flyway.configuration.sqlMigrationSeparator,
+            flyway.configuration.sqlMigrationSuffixes.joinToString()
+        )
+
         log.info("Flyway locations = {}", flyway.configuration.locations.joinToString())
         log.info("Pending = {}", flyway.info().pending().joinToString { it.version.toString() + ":" + it.description })
 
