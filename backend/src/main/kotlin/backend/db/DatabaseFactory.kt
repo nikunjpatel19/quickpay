@@ -41,16 +41,31 @@ object DatabaseFactory {
         val res = cl.getResource("db/migration/V1_0__init_core.sql")
         log.info("Migration resource visible? ${res != null} -> $res")
 
+//        val flyway = Flyway.configure()
+//            .dataSource(dataSource)
+//            .locations(flywayLocations)
+//            .sqlMigrationPrefix("V")
+//            .sqlMigrationSeparator("__")
+//            .sqlMigrationSuffixes(".sql")
+//            .baselineOnMigrate(true)
+//            .load()
+//
+//        val result = flyway.migrate()
+
+        //temp
         val flyway = Flyway.configure()
             .dataSource(dataSource)
             .locations(flywayLocations)
             .sqlMigrationPrefix("V")
+            .repeatableSqlMigrationPrefix("R")
             .sqlMigrationSeparator("__")
             .sqlMigrationSuffixes(".sql")
+            .validateMigrationNaming(true) // fail fast with list if still wrong
             .baselineOnMigrate(true)
             .load()
 
         val result = flyway.migrate()
+
         log.info("Flyway migration result: {}", result)
 
 
