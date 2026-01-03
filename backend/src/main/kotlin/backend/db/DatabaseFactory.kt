@@ -56,18 +56,11 @@ object DatabaseFactory {
         val flyway = Flyway.configure()
             .dataSource(dataSource)
             .locations(flywayLocations)
-            .sqlMigrationPrefix("V")
-            .repeatableSqlMigrationPrefix("R")
-            .sqlMigrationSeparator("__")
-            .sqlMigrationSuffixes(".sql")
-            .validateMigrationNaming(true) // fail fast with list if still wrong
             .baselineOnMigrate(true)
             .load()
 
         val result = flyway.migrate()
-
         log.info("Flyway migration result: {}", result)
-
 
         val db = Database.connect(dataSource)
         log.info("Connected to Postgres")
