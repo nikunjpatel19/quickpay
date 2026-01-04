@@ -50,3 +50,7 @@ dependencies {
     implementation("io.ktor:ktor-client-logging:2.3.7")
 
 }
+// add this at the bottom of the file
+tasks.shadowJar {
+    mergeServiceFiles()
+}
