@@ -44,8 +44,10 @@ dependencies {
     implementation("com.zaxxer:HikariCP:5.1.0")
 
     // Flyway for migrations
-    implementation("org.flywaydb:flyway-core:10.17.0")
-    implementation("org.flywaydb:flyway-database-postgresql:10.17.0")
+//    implementation("org.flywaydb:flyway-core:10.17.0")
+//    implementation("org.flywaydb:flyway-database-postgresql:10.17.0")
+    implementation("org.flywaydb:flyway-core:9.22.3")
+
 
     // Logging
     implementation("ch.qos.logback:logback-classic:1.5.13")
