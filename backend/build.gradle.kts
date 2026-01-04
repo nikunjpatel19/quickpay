@@ -5,8 +5,8 @@ plugins {
     alias(libs.plugins.ktor)
     alias(libs.plugins.kotlin.plugin.serialization)
 
-    // Add Shadow plugin
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    // Ktor 3.x uses the GradleUp Shadow plugin. Do NOT use johnrengelman shadow.
+    id("com.gradleup.shadow") version "9.1.0"
 }
 
 group = "com.quickpay"
@@ -58,9 +58,4 @@ dependencies {
 tasks.withType<ShadowJar> {
     mergeServiceFiles()
     archiveClassifier.set("all")
-}
-
-// Optional convenience task if you want your old Docker command name
-tasks.register("buildFatJar") {
-    dependsOn(tasks.named("shadowJar"))
 }
