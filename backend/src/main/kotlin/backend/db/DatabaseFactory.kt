@@ -30,6 +30,8 @@ object DatabaseFactory {
 
         val dataSource = HikariDataSource(hikari)
 
+        log.info("Flyway version: {}", Flyway::class.java.`package`.implementationVersion)
+
         val flyway = Flyway.configure()
             .dataSource(dataSource)
             .locations("classpath:db/migration")

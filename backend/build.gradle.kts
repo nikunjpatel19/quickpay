@@ -26,6 +26,13 @@ dependencies {
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
 
+    // Ktor HTTP client
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.content.negotiation)
+//    implementation(libs.ktor.client.serialization.kotlinx.json)
+    implementation(libs.ktor.client.logging)
+
     // Exposed + Postgres
     implementation("org.jetbrains.exposed:exposed-core:0.56.0")
     implementation("org.jetbrains.exposed:exposed-dao:0.56.0")
@@ -43,16 +50,16 @@ dependencies {
     // Logging
     implementation("ch.qos.logback:logback-classic:1.5.13")
 
-    // Ktor HTTP client
-    implementation("io.ktor:ktor-client-core:2.3.7")
-    implementation("io.ktor:ktor-client-cio:2.3.7")
-
-    // JSON support
-    implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
-
-    // Logging plugin
-    implementation("io.ktor:ktor-client-logging:2.3.7")
+//    // Ktor HTTP client
+//    implementation("io.ktor:ktor-client-core:2.3.7")
+//    implementation("io.ktor:ktor-client-cio:2.3.7")
+//
+//    // JSON support
+//    implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
+//    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
+//
+//    // Logging plugin
+//    implementation("io.ktor:ktor-client-logging:2.3.7")
 
 }
 tasks.withType<ShadowJar> {
