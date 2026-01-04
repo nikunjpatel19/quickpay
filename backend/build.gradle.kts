@@ -1,7 +1,12 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.ktor)
     alias(libs.plugins.kotlin.plugin.serialization)
+
+    // Add Shadow plugin
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 group = "com.quickpay"
@@ -50,7 +55,12 @@ dependencies {
     implementation("io.ktor:ktor-client-logging:2.3.7")
 
 }
-// add this at the bottom of the file
-tasks.shadowJar {
+tasks.withType<ShadowJar> {
     mergeServiceFiles()
+    archiveClassifier.set("all")
+}
+
+// Optional convenience task if you want your old Docker command name
+tasks.register("buildFatJar") {
+    dependsOn(tasks.named("shadowJar"))
 }
