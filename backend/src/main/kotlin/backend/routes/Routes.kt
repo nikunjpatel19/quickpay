@@ -26,6 +26,13 @@ import java.time.ZoneOffset
 
 private val webhookJson = Json { ignoreUnknownKeys = true }
 
+private fun FinixWebhookEvent.resourceId(): String? =
+    when (entity) {
+        "payment_link" -> embedded?.paymentLinks?.firstOrNull()?.id
+        "transfer"     -> embedded?.transfers?.firstOrNull()?.id
+        else -> null
+    }
+
 fun Application.registerRoutes(
     paymentLinks: PaymentLinkRepository,
     orders: OrderRepository
@@ -150,22 +157,42 @@ fun Application.registerRoutes(
             }
 
             // Store valid payload
-            val rowId = transaction {
-                WebhookEvents.insert {
-                    it[eventType]  = "${event.entity}:${event.type}"
-                    it[payload]    = rawBody
-                    it[receivedAt] = OffsetDateTime.ofInstant(now.toJavaInstant(), ZoneOffset.UTC)
-                    it[processed]  = false
-                } get WebhookEvents.id
+//            val rowId = transaction {
+//                WebhookEvents.insert {
+//                    it[eventType]  = "${event.entity}:${event.type}"
+//                    it[payload]    = rawBody
+//                    it[receivedAt] = OffsetDateTime.ofInstant(now.toJavaInstant(), ZoneOffset.UTC)
+//                    it[processed]  = false
+//                } get WebhookEvents.id
+//            }
+
+            val rowId = try {
+                transaction {
+                    WebhookEvents.insert {
+                        it[finixEventId] = event.id
+                        it[entity] = event.entity
+                        it[eventType] = event.type
+                        it[resourceId] = event.resourceId()
+                        it[payload] = rawBody
+                        it[receivedAt] =
+                            OffsetDateTime.ofInstant(now.toJavaInstant(), ZoneOffset.UTC)
+                        it[processed] = false
+                    } get WebhookEvents.id
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
             }
 
-            // Apply business logic
-            FinixWebhookHandler.handle(event, orders, paymentLinks)
+            if (rowId != null) {
+                // Apply business logic
+                FinixWebhookHandler.handle(event, orders, paymentLinks)
 
-            // Mark as processed
-            transaction {
-                WebhookEvents.update({ WebhookEvents.id eq rowId }) {
-                    it[processed] = true
+                // Mark as processed
+                transaction {
+                    WebhookEvents.update({ WebhookEvents.id eq rowId }) {
+                        it[processed] = true
+                    }
                 }
             }
 
