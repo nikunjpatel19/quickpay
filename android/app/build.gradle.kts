@@ -20,16 +20,26 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Emulator to host machine
+            buildConfigField("String", "BASE_URL", "\"https://quickpay-backend-w459.onrender.com/\"")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+
+            // TODO: replace with your Render URL (must end with /)
+            buildConfigField("String", "BASE_URL", "\"https://quickpay-backend-w459.onrender.com/\"")
         }
     }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 
     // AGP 8.9.x + Kotlin 2.x → Java 17
     compileOptions {
@@ -74,8 +84,6 @@ dependencies {
 
     implementation("com.google.zxing:core:3.5.1")
 
-    dependencies {
-        implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
-    }
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
 
 }

@@ -8,18 +8,18 @@ import retrofit2.Response
 import retrofit2.http.*
 
 interface QuickPayApi {
-    @POST("/v1/links")
+    @POST("v1/links")
     suspend fun createLink(@Body body: CreateLinkReq): Response<CreateLinkRes>
 
-    @GET("/v1/orders/{id}")
+    @GET("v1/orders/{id}")
     suspend fun getOrder(@Path("id") id: String): OrderDto
 
-    @POST("/v1/dev/orders/{id}/mark")
+    @POST("v1/dev/orders/{id}/mark")
     suspend fun markOrder(
         @Path("id") id: String,
         @Query("status") status: String
     )
-    // New: list recent orders
+
     @GET("v1/orders")
     suspend fun getOrders(
         @Query("limit") limit: Int = 20
