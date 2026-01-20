@@ -11,5 +11,7 @@ object Orders : Table("orders") {
     val currency = varchar("currency", 3)
     val createdAt = timestampWithTimeZone("created_at")
     val updatedAt = timestampWithTimeZone("updated_at")
+    val note = text("note").nullable()
+
     override val primaryKey = PrimaryKey(id)
 }

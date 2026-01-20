@@ -9,7 +9,8 @@ import kotlinx.serialization.Serializable
 data class CreateLinkReq(
     val amountCents: Long,
     val currency: String,
-    val description: String? = null
+    val description: String? = null,
+    val note: String? = null              // NEW
 )
 
 /**
@@ -34,7 +35,8 @@ data class OrderDto(
     val linkId: String,
     val status: String,         // created | authorized | captured | failed
     val amountCents: Long,
-    val currency: String
+    val currency: String,
+    val note: String? = null              // NEW
 )
 
 /**

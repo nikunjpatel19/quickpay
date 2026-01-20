@@ -19,7 +19,8 @@ class OrderRepositoryExposed : OrderRepository {
                     linkId = it[Orders.linkId],
                     status = it[Orders.status],
                     amountCents = it[Orders.amountCents],
-                    currency = it[Orders.currency]
+                    currency = it[Orders.currency],
+                    note = it[Orders.note]          // NEW
                 )
             }
             .singleOrNull()
@@ -31,7 +32,7 @@ class OrderRepositoryExposed : OrderRepository {
         } > 0
     }
 
-    override fun createForLink(orderId: String, linkId: String, amountCents: Long, currency: String): OrderDto =
+    override fun createForLink(orderId: String, linkId: String, amountCents: Long, currency: String, note: String?): OrderDto =
         transaction {
             Orders.insert {
                 it[Orders.id] = orderId
@@ -39,6 +40,7 @@ class OrderRepositoryExposed : OrderRepository {
                 it[Orders.status] = "created"
                 it[Orders.amountCents] = amountCents
                 it[Orders.currency] = currency
+                it[Orders.note] = note?.takeIf { n -> n.isNotBlank() }   // NEW
             }
             get(orderId)!!
         }
@@ -47,8 +49,7 @@ class OrderRepositoryExposed : OrderRepository {
     override fun listRecent(limit: Int): List<OrderDto> = transaction {
         Orders
             .selectAll()
-            // if you have a createdAt column, prefer ordering by that instead of id
-            .orderBy(Orders.id to SortOrder.DESC)
+            .orderBy(Orders.createdAt to SortOrder.DESC)  // better than id
             .limit(limit)
             .map {
                 OrderDto(
@@ -56,8 +57,26 @@ class OrderRepositoryExposed : OrderRepository {
                     linkId = it[Orders.linkId],
                     status = it[Orders.status],
                     amountCents = it[Orders.amountCents],
-                    currency = it[Orders.currency]
+                    currency = it[Orders.currency],
+                    note = it[Orders.note]                // NEW
                 )
             }
+    }
+
+    override fun cancel(id: String): Boolean = transaction {
+        val current = Orders
+            .selectAll()
+            .where { Orders.id eq id }
+            .limit(1)
+            .singleOrNull() ?: return@transaction false
+
+        val status = current[Orders.status].lowercase()
+        if (status == "captured" || status == "failed" || status == "canceled") {
+            return@transaction false
+        }
+
+        Orders.update({ Orders.id eq id }) {
+            it[Orders.status] = "canceled"
+        } > 0
     }
 }

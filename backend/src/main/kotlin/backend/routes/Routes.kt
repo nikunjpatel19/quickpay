@@ -81,7 +81,8 @@ fun Application.registerRoutes(
                 orderId = internalId,
                 linkId = internalId,
                 amountCents = body.amountCents,
-                currency = body.currency
+                currency = body.currency,
+                note = body.note
             )
 
             // 4. Return proper model to Android
@@ -198,5 +199,12 @@ fun Application.registerRoutes(
 
             call.respond(HttpStatusCode.OK)
         }
+
+        post("/orders/{id}/cancel") {
+            val id = call.parameters["id"] ?: return@post call.respond(HttpStatusCode.BadRequest)
+            val ok = orders.cancel(id)
+            if (ok) call.respond(HttpStatusCode.OK) else call.respond(HttpStatusCode.Conflict)
+        }
+
     }
 }
