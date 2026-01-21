@@ -6,7 +6,8 @@ import com.squareup.moshi.JsonClass
 data class CreateLinkReq(
     val amountCents: Long,          // <-- Long to match backend BIGINT
     val currency: String,
-    val description: String? = null
+    val description: String? = null,
+    val note: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -16,6 +17,7 @@ data class CreateLinkRes(
     val status: String
 )
 
+//can delete, not using
 @JsonClass(generateAdapter = true)
 data class PaymentLinkDto(
     val id: String,
@@ -32,5 +34,6 @@ data class OrderDto(
     val linkId: String,
     val status: String,             // CREATED | AUTHORIZED | CAPTURED | FAILED (server)
     val amountCents: Long,
-    val currency: String
+    val currency: String,
+    val note: String? = null
 )

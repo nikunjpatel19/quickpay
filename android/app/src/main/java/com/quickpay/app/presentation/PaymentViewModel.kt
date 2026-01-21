@@ -13,10 +13,15 @@ import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
 
+enum class CreateFlowStep { INPUT, PAYMENT }
+enum class Currency(val code: String) { USD("USD"), CAD("CAD") }
+
 data class UiState(
-    val amountText: String = "",     // now dollars string, e.g. "9.99"
+    val step: CreateFlowStep = CreateFlowStep.INPUT,
+    val amountText: String = "",     // dollars string, e.g. "9.99"
     val description: String = "",
-    val currency: String = "USD",
+    val note: String = "",       // NEW
+    val currency: Currency = Currency.USD, // NEW (no blank typing)
     val isLoading: Boolean = false,
     val error: String? = null,
     val orderId: String? = null,
@@ -30,7 +35,6 @@ class PaymentViewModel : ViewModel() {
 
     private var pollJob: Job? = null
 
-    // allow digits + one dot, trim extra dots
     fun onAmountChanged(t: String) {
         val filtered = buildString {
             var dotSeen = false
@@ -51,9 +55,12 @@ class PaymentViewModel : ViewModel() {
         _state.value = _state.value.copy(description = t)
     }
 
-    fun onCurrencyChanged(t: String) {
-        val cleaned = t.filter { it.isLetter() }.take(3).uppercase()
-        _state.value = _state.value.copy(currency = cleaned)
+    fun onNoteChanged(t: String) { // NEW
+        _state.value = _state.value.copy(note = t)
+    }
+
+    fun onCurrencySelected(currency: Currency) { // NEW
+        _state.value = _state.value.copy(currency = currency)
     }
 
     fun createLink() {
@@ -65,19 +72,15 @@ class PaymentViewModel : ViewModel() {
             return
         }
 
-        if (_state.value.currency.length != 3) {
-            _state.value = _state.value.copy(error = "Currency must be 3 letters (example: USD)")
-            return
-        }
-
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             try {
                 val response = ApiModule.api.createLink(
                     CreateLinkReq(
                         amountCents = cents,
-                        currency = _state.value.currency,
-                        description = _state.value.description.ifBlank { null }
+                        currency = _state.value.currency.code,
+                        description = _state.value.description.ifBlank { null },
+                        note = _state.value.note.ifBlank { null }
                     )
                 )
 
@@ -93,6 +96,7 @@ class PaymentViewModel : ViewModel() {
 
                     _state.value = _state.value.copy(
                         isLoading = false,
+                        step = CreateFlowStep.PAYMENT,
                         orderId = link.orderId,
                         checkoutUrl = link.url,
                         orderStatus = link.status
@@ -117,7 +121,7 @@ class PaymentViewModel : ViewModel() {
     private fun startPolling(id: String) {
         pollJob?.cancel()
         pollJob = viewModelScope.launch {
-            repeat(120) { // ~6 minutes at 3s each
+            repeat(120) {
                 try {
                     val order: OrderDto = ApiModule.api.getOrder(id)
                     val uiStatus = order.status
@@ -137,6 +141,16 @@ class PaymentViewModel : ViewModel() {
         }
     }
 
+    fun startNewPayment() {
+        pollJob?.cancel()
+        _state.value = UiState()
+    }
+
+    fun editDetails() {
+        pollJob?.cancel()
+        _state.value = _state.value.copy(step = CreateFlowStep.INPUT)
+    }
+
     fun clearError() {
         _state.value = _state.value.copy(error = null)
     }
@@ -149,8 +163,7 @@ class PaymentViewModel : ViewModel() {
     private fun dollarsToCentsOrNull(input: String): Long? {
         if (input.isBlank()) return null
         return try {
-            val bd = BigDecimal(input)
-                .setScale(2, RoundingMode.HALF_UP) // 9.9 -> 9.90, 9.999 -> 10.00
+            val bd = BigDecimal(input).setScale(2, RoundingMode.HALF_UP)
             bd.movePointRight(2).longValueExact()
         } catch (_: Exception) {
             null

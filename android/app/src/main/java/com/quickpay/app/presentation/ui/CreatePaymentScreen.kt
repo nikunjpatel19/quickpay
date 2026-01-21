@@ -3,7 +3,12 @@ package com.quickpay.app.presentation.ui
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -11,153 +16,282 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.quickpay.app.presentation.CreateFlowStep
+import com.quickpay.app.presentation.Currency
 import com.quickpay.app.presentation.PaymentViewModel
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 
 @Composable
 fun CreatePaymentScreen(vm: PaymentViewModel) {
     val state by vm.state.collectAsState()
-    val context = LocalContext.current
-    val clipboard = LocalClipboardManager.current
-
-    val status = (state.orderStatus ?: "").uppercase()
-    val statusLabel = when (status) {
-        "CREATED" -> "Awaiting payment"
-        "AUTHORIZED" -> "Authorized"
-        "CAPTURED" -> "Paid"
-        "FAILED" -> "Failed"
-        else -> if (status.isBlank()) "-" else status.lowercase()
-    }
+    val scroll = rememberScrollState()
 
     Column(
-        Modifier
+        modifier = Modifier
             .fillMaxSize()
-            .padding(20.dp),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.Start
+            .verticalScroll(scroll)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Create Payment", style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(16.dp))
+        Text("Create payment", style = MaterialTheme.typography.headlineSmall)
 
-        OutlinedTextField(
-            value = state.amountText,
-            onValueChange = vm::onAmountChanged,
-            label = { Text("Amount (e.g., 9.99)") },
-            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Decimal),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = state.description,
-            onValueChange = vm::onDescChanged,
-            label = { Text("Description") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = state.currency,
-            onValueChange = vm::onCurrencyChanged,
-            label = { Text("Currency (USD/CAD)") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        Button(
-            onClick = vm::createLink,
-            enabled = !state.isLoading,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            if (state.isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
-                    strokeWidth = 2.dp
+        when (state.step) {
+            CreateFlowStep.INPUT -> {
+                PaymentDetailsCard(
+                    amount = state.amountText,
+                    description = state.description,
+                    note = state.note,
+                    currency = state.currency,
+                    isLoading = state.isLoading,
+                    onAmountChanged = vm::onAmountChanged,
+                    onDescChanged = vm::onDescChanged,
+                    onNoteChanged = vm::onNoteChanged,
+                    onCurrencySelected = vm::onCurrencySelected,
+                    onCreate = vm::createLink
                 )
-                Spacer(Modifier.width(10.dp))
-                Text("Creating...")
-            } else {
-                Text("Create Link")
+            }
+
+            CreateFlowStep.PAYMENT -> {
+                PaymentLinkCard(
+                    orderId = state.orderId,
+                    statusRaw = state.orderStatus,
+                    checkoutUrl = state.checkoutUrl,
+                    onEdit = vm::editDetails,
+                    onNew = vm::startNewPayment
+                )
             }
         }
 
-        Spacer(Modifier.height(24.dp))
-
-        if (state.orderId != null) {
-            Text("Order: ${state.orderId}")
-            Spacer(Modifier.height(6.dp))
-            AssistChip(
-                onClick = {},
-                label = { Text(statusLabel) }
+        if (state.error != null) {
+            ErrorCard(
+                message = state.error!!,
+                onDismiss = vm::clearError
             )
         }
+    }
+}
 
-        val checkoutUrl = state.checkoutUrl
+@Composable
+private fun PaymentDetailsCard(
+    amount: String,
+    description: String,
+    note: String,
+    currency: Currency,
+    isLoading: Boolean,
+    onAmountChanged: (String) -> Unit,
+    onDescChanged: (String) -> Unit,
+    onNoteChanged: (String) -> Unit,
+    onCurrencySelected: (Currency) -> Unit,
+    onCreate: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text("Payment details", style = MaterialTheme.typography.titleMedium)
 
-        if (!checkoutUrl.isNullOrBlank()) {
-            Spacer(Modifier.height(16.dp))
+            OutlinedTextField(
+                value = amount,
+                onValueChange = onAmountChanged,
+                label = { Text("Amount") },
+                placeholder = { Text("9.99") },
+                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
 
-            Text("Show this QR to your customer", style = MaterialTheme.typography.titleMedium)
+            OutlinedTextField(
+                value = description,
+                onValueChange = onDescChanged,
+                label = { Text("Description") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
 
-            Box(
+            OutlinedTextField(
+                value = note,
+                onValueChange = onNoteChanged,
+                label = { Text("Note (optional)") },
+                placeholder = { Text("Table 7, Receipt #1042, etc.") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            CurrencySelector(
+                selected = currency,
+                onSelected = onCurrencySelected
+            )
+
+            Button(
+                onClick = onCreate,
+                enabled = !isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                contentAlignment = Alignment.Center
+                    .height(48.dp)
             ) {
-                QrCode(
-                    data = checkoutUrl,
-                    size = 220.dp
+                Text(if (isLoading) "Creating..." else "Create link")
+            }
+        }
+    }
+}
+
+@Composable
+private fun CurrencySelector(
+    selected: Currency,
+    onSelected: (Currency) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Currency", style = MaterialTheme.typography.labelLarge)
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            SegmentedButton(
+                selected = selected == Currency.USD,
+                onClick = { onSelected(Currency.USD) },
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                label = { Text("USD") }
+            )
+            SegmentedButton(
+                selected = selected == Currency.CAD,
+                onClick = { onSelected(Currency.CAD) },
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                label = { Text("CAD") }
+            )
+        }
+    }
+}
+
+@Composable
+private fun PaymentLinkCard(
+    orderId: String?,
+    statusRaw: String?,
+    checkoutUrl: String?,
+    onEdit: () -> Unit,
+    onNew: () -> Unit
+) {
+    val context = LocalContext.current
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text("Payment link", style = MaterialTheme.typography.titleMedium)
+
+            if (orderId != null) {
+                Text("Order: $orderId", style = MaterialTheme.typography.bodyMedium)
+            }
+
+            StatusChip(statusRaw = statusRaw)
+
+            if (checkoutUrl != null) {
+                Text("Show this QR to your customer", style = MaterialTheme.typography.bodyMedium)
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    QrCode(
+                        data = checkoutUrl,
+                        size = 220.dp
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            val i = Intent(Intent.ACTION_VIEW, Uri.parse(checkoutUrl))
+                            context.startActivity(i)
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.OpenInNew, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Open")
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            val i = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, checkoutUrl)
+                            }
+                            context.startActivity(Intent.createChooser(i, "Share payment link"))
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Share")
+                    }
+                }
+
+                Text(
+                    text = checkoutUrl,
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                OutlinedButton(
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(checkoutUrl))
-                        context.startActivity(intent)
-                    },
-                    modifier = Modifier.weight(1f)
-                ) { Text("Open") }
-
-                OutlinedButton(
-                    onClick = {
-                        clipboard.setText(AnnotatedString(checkoutUrl))
-                    },
-                    modifier = Modifier.weight(1f)
-                ) { Text("Copy") }
-
-                OutlinedButton(
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, checkoutUrl)
-                        }
-                        context.startActivity(Intent.createChooser(intent, "Share link"))
-                    },
-                    modifier = Modifier.weight(1f)
-                ) { Text("Share") }
+                TextButton(onClick = onEdit, modifier = Modifier.weight(1f)) {
+                    Text("Edit details")
+                }
+                TextButton(onClick = onNew, modifier = Modifier.weight(1f)) {
+                    Text("New payment")
+                }
             }
-
-            Spacer(Modifier.height(8.dp))
-            Text(checkoutUrl, style = MaterialTheme.typography.bodySmall)
         }
+    }
+}
 
-        if (state.error != null) {
-            Spacer(Modifier.height(12.dp))
-            Text(state.error!!, color = MaterialTheme.colorScheme.error)
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = vm::clearError) { Text("Dismiss") }
+@Composable
+public fun StatusChip(statusRaw: String?) {
+    val label = when (statusRaw?.lowercase()) {
+        "captured", "paid" -> "Paid"
+        "failed" -> "Failed"
+        "created", "pending", null -> "Awaiting payment"
+        else -> statusRaw
+    }
+
+    AssistChip(
+        onClick = {},
+        label = { Text(label ?: "Awaiting payment") }
+    )
+}
+
+@Composable
+private fun ErrorCard(
+    message: String,
+    onDismiss: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = message,
+                modifier = Modifier.weight(1f),
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+            TextButton(onClick = onDismiss) {
+                Text("Dismiss")
+            }
         }
     }
 }

@@ -8,6 +8,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import java.util.concurrent.TimeUnit
+import android.util.Log
 
 object ApiModule {
 
@@ -31,6 +32,7 @@ object ApiModule {
     }
 
     val api: QuickPayApi by lazy {
+        Log.i("QuickPay", "BASE_URL=" + BuildConfig.BASE_URL)
         Retrofit.Builder()
             .baseUrl(BuildConfig.BASE_URL)
             .client(client)

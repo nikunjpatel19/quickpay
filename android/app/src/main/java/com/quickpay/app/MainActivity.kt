@@ -30,9 +30,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+//        setContent {
+//            Surface(color = MaterialTheme.colorScheme.background) {
+//                QuickPayApp()
+//            }
+//        }
         setContent {
-            Surface(color = MaterialTheme.colorScheme.background) {
-                QuickPayApp()
+            com.quickpay.app.ui.theme.QuickpayTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    QuickPayApp()
+                }
             }
         }
     }
