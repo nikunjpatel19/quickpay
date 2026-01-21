@@ -56,7 +56,9 @@ fun CreatePaymentScreen(vm: PaymentViewModel) {
                     statusRaw = state.orderStatus,
                     checkoutUrl = state.checkoutUrl,
                     onEdit = vm::editDetails,
-                    onNew = vm::startNewPayment
+                    onNew = vm::startNewPayment,
+                    onCancel = vm::cancelCurrentOrder,
+                    isLoading = state.isLoading
                 )
             }
         }
@@ -168,9 +170,17 @@ private fun PaymentLinkCard(
     statusRaw: String?,
     checkoutUrl: String?,
     onEdit: () -> Unit,
-    onNew: () -> Unit
+    onNew: () -> Unit,
+    onCancel: () -> Unit,
+    isLoading: Boolean
 ) {
     val context = LocalContext.current
+
+    val canCancel = when (statusRaw?.lowercase()) {
+        null, "created", "pending" -> true
+        "captured", "paid", "failed", "cancelled", "canceled", "deactivated" -> false
+        else -> true
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -182,25 +192,18 @@ private fun PaymentLinkCard(
         ) {
             Text("Payment link", style = MaterialTheme.typography.titleMedium)
 
-            if (orderId != null) {
-                Text("Order: $orderId", style = MaterialTheme.typography.bodyMedium)
-            }
+            if (orderId != null) Text("Order: $orderId")
 
             StatusChip(statusRaw = statusRaw)
 
             if (checkoutUrl != null) {
-                Text("Show this QR to your customer", style = MaterialTheme.typography.bodyMedium)
+                Text("Show this QR to your customer")
 
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 6.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    QrCode(
-                        data = checkoutUrl,
-                        size = 220.dp
-                    )
+                    QrCode(data = checkoutUrl, size = 220.dp)
                 }
 
                 Row(
@@ -235,22 +238,25 @@ private fun PaymentLinkCard(
                     }
                 }
 
-                Text(
-                    text = checkoutUrl,
-                    style = MaterialTheme.typography.bodySmall
-                )
+                Text(checkoutUrl, style = MaterialTheme.typography.bodySmall)
+            }
+
+            if (canCancel) {
+                Button(
+                    onClick = onCancel,
+                    enabled = !isLoading,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (isLoading) "Cancelling..." else "Cancel payment link")
+                }
             }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                TextButton(onClick = onEdit, modifier = Modifier.weight(1f)) {
-                    Text("Edit details")
-                }
-                TextButton(onClick = onNew, modifier = Modifier.weight(1f)) {
-                    Text("New payment")
-                }
+                TextButton(onClick = onEdit, modifier = Modifier.weight(1f)) { Text("Edit details") }
+                TextButton(onClick = onNew, modifier = Modifier.weight(1f)) { Text("New payment") }
             }
         }
     }

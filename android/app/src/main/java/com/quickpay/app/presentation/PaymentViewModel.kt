@@ -169,4 +169,33 @@ class PaymentViewModel : ViewModel() {
             null
         }
     }
+
+    fun cancelCurrentOrder() {
+        val id = _state.value.orderId ?: return
+
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null)
+
+            try {
+                val res = ApiModule.api.cancelOrder(id)
+                if (res.isSuccessful) {
+                    pollJob?.cancel()
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        orderStatus = "FAILED"
+                    )
+                } else {
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        error = "Cancel failed (${res.code()})"
+                    )
+                }
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "Cancel failed"
+                )
+            }
+        }
+    }
 }

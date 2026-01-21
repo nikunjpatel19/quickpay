@@ -24,4 +24,7 @@ interface QuickPayApi {
     suspend fun getOrders(
         @Query("limit") limit: Int = 20
     ): List<OrderDto>
+
+    @POST("v1/orders/{id}/cancel")
+    suspend fun cancelOrder(@Path("id") id: String): Response<Unit>
 }
