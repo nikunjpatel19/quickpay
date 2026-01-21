@@ -55,6 +55,10 @@ fun CreatePaymentScreen(vm: PaymentViewModel) {
                     orderId = state.orderId,
                     statusRaw = state.orderStatus,
                     checkoutUrl = state.checkoutUrl,
+                    amountText = state.amountText,
+                    currency = state.currency,
+                    description = state.description,
+                    note = state.note,
                     onEdit = vm::editDetails,
                     onNew = vm::startNewPayment,
                     onCancel = vm::cancelCurrentOrder,
@@ -164,23 +168,41 @@ private fun CurrencySelector(
     }
 }
 
+private data class PaymentUiFlags(
+    val isPaid: Boolean,
+    val isCancelled: Boolean,
+    val isTerminal: Boolean,
+    val canCancel: Boolean
+)
+
+private fun computePaymentUiFlags(statusRaw: String?): PaymentUiFlags {
+    val s = statusRaw?.lowercase()
+    val isPaid = s == "captured" || s == "paid"
+    val isCancelled = s == "failed" || s == "cancelled" || s == "canceled" || s == "deactivated"
+    val isTerminal = isPaid || isCancelled
+    val canCancel = !isTerminal && when (s) {
+        null, "created", "pending" -> true
+        else -> true
+    }
+    return PaymentUiFlags(isPaid, isCancelled, isTerminal, canCancel)
+}
+
 @Composable
 private fun PaymentLinkCard(
     orderId: String?,
     statusRaw: String?,
     checkoutUrl: String?,
+    amountText: String,
+    currency: Currency,
+    description: String,
+    note: String,
     onEdit: () -> Unit,
     onNew: () -> Unit,
     onCancel: () -> Unit,
     isLoading: Boolean
 ) {
     val context = LocalContext.current
-
-    val canCancel = when (statusRaw?.lowercase()) {
-        null, "created", "pending" -> true
-        "captured", "paid", "failed", "cancelled", "canceled", "deactivated" -> false
-        else -> true
-    }
+    val flags = remember(statusRaw) { computePaymentUiFlags(statusRaw) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -196,11 +218,13 @@ private fun PaymentLinkCard(
 
             StatusChip(statusRaw = statusRaw)
 
-            if (checkoutUrl != null) {
+            if (!flags.isTerminal && checkoutUrl != null) {
                 Text("Show this QR to your customer")
 
                 Box(
-                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     QrCode(data = checkoutUrl, size = 220.dp)
@@ -215,6 +239,7 @@ private fun PaymentLinkCard(
                             val i = Intent(Intent.ACTION_VIEW, Uri.parse(checkoutUrl))
                             context.startActivity(i)
                         },
+                        enabled = !isLoading,
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(Icons.Default.OpenInNew, contentDescription = null)
@@ -230,6 +255,7 @@ private fun PaymentLinkCard(
                             }
                             context.startActivity(Intent.createChooser(i, "Share payment link"))
                         },
+                        enabled = !isLoading,
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(Icons.Default.Share, contentDescription = null)
@@ -239,9 +265,32 @@ private fun PaymentLinkCard(
                 }
 
                 Text(checkoutUrl, style = MaterialTheme.typography.bodySmall)
+            } else {
+                val msg = when {
+                    flags.isPaid -> "Payment completed."
+                    flags.isCancelled -> "Payment link cancelled."
+                    else -> "Payment link unavailable."
+                }
+                Text(msg, style = MaterialTheme.typography.bodyMedium)
+
+                // Keep context so the card doesn't feel empty
+                val amountLine = buildString {
+                    append("Amount: ")
+                    append(if (amountText.isBlank()) "—" else amountText.trim())
+                    append(" ")
+                    append(currency.code)
+                }
+                Text(amountLine, style = MaterialTheme.typography.bodySmall)
+
+                if (description.isNotBlank()) {
+                    Text("Description: ${description.trim()}", style = MaterialTheme.typography.bodySmall)
+                }
+                if (note.isNotBlank()) {
+                    Text("Note: ${note.trim()}", style = MaterialTheme.typography.bodySmall)
+                }
             }
 
-            if (canCancel) {
+            if (flags.canCancel) {
                 Button(
                     onClick = onCancel,
                     enabled = !isLoading,
@@ -251,12 +300,31 @@ private fun PaymentLinkCard(
                 }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                TextButton(onClick = onEdit, modifier = Modifier.weight(1f)) { Text("Edit details") }
-                TextButton(onClick = onNew, modifier = Modifier.weight(1f)) { Text("New payment") }
+            // Terminal state should push the user to the next action.
+            if (flags.isTerminal) {
+                Button(
+                    onClick = onNew,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                ) {
+                    Text("New payment")
+                }
+
+                OutlinedButton(
+                    onClick = onEdit,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Edit details")
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    TextButton(onClick = onEdit, modifier = Modifier.weight(1f)) { Text("Edit details") }
+                    TextButton(onClick = onNew, modifier = Modifier.weight(1f)) { Text("New payment") }
+                }
             }
         }
     }
@@ -264,9 +332,11 @@ private fun PaymentLinkCard(
 
 @Composable
 public fun StatusChip(statusRaw: String?) {
-    val label = when (statusRaw?.lowercase()) {
+    val s = statusRaw?.lowercase()
+
+    val label = when (s) {
         "captured", "paid" -> "Paid"
-        "failed" -> "Failed"
+        "failed", "cancelled", "canceled", "deactivated" -> "Cancelled"
         "created", "pending", null -> "Awaiting payment"
         else -> statusRaw
     }
@@ -295,9 +365,7 @@ private fun ErrorCard(
                 modifier = Modifier.weight(1f),
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
-            TextButton(onClick = onDismiss) {
-                Text("Dismiss")
-            }
+            TextButton(onClick = onDismiss) { Text("Dismiss") }
         }
     }
 }
