@@ -37,7 +37,8 @@ data class OrderDto(
     val status: String,         // created | authorized | captured | failed
     val amountCents: Long,
     val currency: String,
-    val note: String? = null              // NEW
+    val note: String? = null,              // NEW
+    val createdAt: String // NEW (ISO string)
 )
 
 /**

@@ -20,7 +20,8 @@ class OrderRepositoryExposed : OrderRepository {
                     status = it[Orders.status],
                     amountCents = it[Orders.amountCents],
                     currency = it[Orders.currency],
-                    note = it[Orders.note]          // NEW
+                    note = it[Orders.note],
+                    createdAt = it[Orders.createdAt].toString()
                 )
             }
             .singleOrNull()
@@ -58,7 +59,8 @@ class OrderRepositoryExposed : OrderRepository {
                     status = it[Orders.status],
                     amountCents = it[Orders.amountCents],
                     currency = it[Orders.currency],
-                    note = it[Orders.note]                // NEW
+                    note = it[Orders.note],
+                    createdAt = it[Orders.createdAt].toString()
                 )
             }
     }
