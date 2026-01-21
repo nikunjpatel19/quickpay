@@ -67,10 +67,11 @@ fun Application.registerRoutes(
 
             val now = Clock.System.now()
 
-            // 2. Save payment link in DB
+            // Save link with finix id
             paymentLinks.create(
                 req = body,
                 generatedId = internalId,
+                finixPaymentLinkId = finixRes.id,      // NEW
                 checkoutUrl = finixRes.linkUrl,
                 createdAt = now,
                 updatedAt = now
@@ -200,11 +201,46 @@ fun Application.registerRoutes(
             call.respond(HttpStatusCode.OK)
         }
 
+        // FINAL cancel endpoint
         post("/orders/{id}/cancel") {
             val id = call.parameters["id"] ?: return@post call.respond(HttpStatusCode.BadRequest)
-            val ok = orders.cancel(id)
-            if (ok) call.respond(HttpStatusCode.OK) else call.respond(HttpStatusCode.Conflict)
-        }
 
+            val link = paymentLinks.get(id) ?: return@post call.respond(HttpStatusCode.NotFound)
+            val linkStatus = link.status.lowercase()
+
+            if (linkStatus in setOf("paid", "captured")) {
+                return@post call.respond(HttpStatusCode.Conflict, mapOf("error" to "Already paid"))
+            }
+
+            // idempotent
+            if (linkStatus in setOf("cancelled", "canceled", "deactivated")) {
+                return@post call.respond(HttpStatusCode.OK)
+            }
+
+            val finixId = link.finixPaymentLinkId
+            if (finixId.isNullOrBlank()) {
+                return@post call.respond(
+                    HttpStatusCode.Conflict,
+                    mapOf("error" to "Missing finix_payment_link_id in DB")
+                )
+            }
+
+            try {
+                FinixPaymentLinksClient.deactivatePaymentLink(finixId)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return@post call.respond(
+                    HttpStatusCode.BadGateway,
+                    mapOf("error" to "Finix deactivation failed")
+                )
+            }
+
+            // Make order terminal so Android stops polling
+            val okOrder = orders.markDevStatus(id, "FAILED")
+            val okLink = paymentLinks.updateStatus(id, "cancelled")
+
+            if (okOrder && okLink) call.respond(HttpStatusCode.OK)
+            else call.respond(HttpStatusCode.Conflict, mapOf("error" to "Cancel not allowed"))
+        }
     }
 }

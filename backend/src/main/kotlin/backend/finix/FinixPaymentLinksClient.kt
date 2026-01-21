@@ -8,16 +8,15 @@ import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.basicAuth
 import io.ktor.client.request.header
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import io.ktor.client.statement.bodyAsText
-
-
 
 @Serializable
 data class FinixAmountDetails(
@@ -59,6 +58,12 @@ data class FinixBranding(
     val logo: String,
     val icon: String,
     @SerialName("button_font_color") val buttonFontColor: String
+)
+
+// NEW
+@Serializable
+data class FinixDeactivatePaymentLinkReq(
+    val state: String = "DEACTIVATED"
 )
 
 object FinixPaymentLinksClient {
@@ -115,6 +120,23 @@ object FinixPaymentLinksClient {
 
         val raw = httpResponse.bodyAsText()
         println("FINIX RAW RESPONSE: $raw")
+
+        return json.decodeFromString(FinixPaymentLinkResponse.serializer(), raw)
+    }
+
+    // NEW
+    suspend fun deactivatePaymentLink(finixPaymentLinkId: String): FinixPaymentLinkResponse {
+        val cfg = FinixConfig
+
+        val httpResponse = http.put("${cfg.baseUrl}/payment_links/$finixPaymentLinkId") {
+            contentType(ContentType.Application.Json)
+            header("Finix-Version", "2022-02-01")
+            basicAuth(cfg.username, cfg.password)
+            setBody(FinixDeactivatePaymentLinkReq())
+        }
+
+        val raw = httpResponse.bodyAsText()
+        println("FINIX RAW DEACTIVATE RESPONSE: $raw")
 
         return json.decodeFromString(FinixPaymentLinkResponse.serializer(), raw)
     }

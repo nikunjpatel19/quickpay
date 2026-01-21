@@ -24,19 +24,26 @@ object FinixWebhookHandler {
         orders: OrderRepository,
         paymentLinks: PaymentLinkRepository
     ) {
-        val link = event.embedded?.paymentLinks?.firstOrNull()
-        if (link == null) {
+        val link = event.embedded?.paymentLinks?.firstOrNull() ?: run {
             println("===> No payment_links in embedded")
             return
         }
 
-        println("===> Payment Link id=${link.id}, state=${link.state}")
-
-        // We store our internal order id in Finix tags
-        val internalId = link.tags?.get("order_id")
-        if (internalId == null) {
+        val internalId = link.tags?.get("order_id") ?: run {
             println("===> No order_id tag on payment link, cannot map to local order")
             return
+        }
+
+        val local = paymentLinks.get(internalId)
+        val localStatus = local?.status?.lowercase()
+
+        // If we already cancelled locally, ignore late ACTIVE/COMPLETED.
+        if (localStatus in setOf("cancelled", "canceled", "deactivated")) {
+            val incoming = link.state.uppercase()
+            if (incoming in setOf("ACTIVE", "COMPLETED")) {
+                println("===> Ignoring late $incoming for locally cancelled order $internalId")
+                return
+            }
         }
 
         when (link.state.uppercase()) {
@@ -51,7 +58,7 @@ object FinixWebhookHandler {
                 println("===> Marked order $internalId as CAPTURED / paid")
             }
 
-            "CANCELED" -> {
+            "CANCELED", "CANCELLED", "DEACTIVATED" -> {
                 orders.markDevStatus(internalId, "FAILED")
                 paymentLinks.updateStatus(internalId, "cancelled")
             }
@@ -66,7 +73,5 @@ object FinixWebhookHandler {
             "===> Transfer id=${t.id}, state=${t.state}, " +
                     "amount=${t.amount}, currency=${t.currency}"
         )
-        // At the moment we just log transfers. If you want you can
-        // also hook them into the DB later.
     }
 }

@@ -5,6 +5,8 @@ import org.jetbrains.exposed.sql.kotlin.datetime.timestampWithTimeZone
 
 object PaymentLinks : Table("payment_links") {
     val id = varchar("id", 64)
+    val finixPaymentLinkId = text("finix_payment_link_id").nullable() // NEW
+
     val amountCents = long("amount_cents")
     val currency = varchar("currency", 3)
     val description = text("description").nullable()

@@ -19,6 +19,7 @@ data class CreateLinkReq(
 @Serializable
 data class PaymentLinkDto(
     val id: String,
+    val finixPaymentLinkId: String?, // NEW
     val amountCents: Long,
     val currency: String,
     val description: String?,

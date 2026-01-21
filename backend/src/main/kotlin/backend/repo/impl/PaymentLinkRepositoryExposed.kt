@@ -22,6 +22,7 @@ class PaymentLinkRepositoryExposed : PaymentLinkRepository {
     override fun create(
         req: CreateLinkReq,
         generatedId: String,
+        finixPaymentLinkId: String?, // NEW
         checkoutUrl: String?,
         createdAt: Instant,
         updatedAt: Instant
@@ -34,6 +35,7 @@ class PaymentLinkRepositoryExposed : PaymentLinkRepository {
                 it[currency] = req.currency
                 it[description] = req.description
                 it[PaymentLinks.checkoutUrl] = checkoutUrl
+                it[PaymentLinks.finixPaymentLinkId] = finixPaymentLinkId // NEW
                 it[status] = "pending"
                 it[PaymentLinks.createdAt] = createdAt.toOffsetDateTime()
                 it[PaymentLinks.updatedAt] = updatedAt.toOffsetDateTime()
@@ -52,6 +54,7 @@ class PaymentLinkRepositoryExposed : PaymentLinkRepository {
             .map {
                 PaymentLinkDto(
                     id = it[PaymentLinks.id],
+                    finixPaymentLinkId = it[PaymentLinks.finixPaymentLinkId], // NEW
                     amountCents = it[PaymentLinks.amountCents],
                     currency = it[PaymentLinks.currency],
                     description = it[PaymentLinks.description],
@@ -74,6 +77,13 @@ class PaymentLinkRepositoryExposed : PaymentLinkRepository {
         PaymentLinks.update({ PaymentLinks.id eq id }) {
             it[PaymentLinks.checkoutUrl] = url
             it[PaymentLinks.updatedAt] = System.now().toOffsetDateTime()
+        } > 0
+    }
+
+    override fun setFinixPaymentLinkId(id: String, finixId: String): Boolean = transaction {
+        PaymentLinks.update({ PaymentLinks.id eq id }) {
+            it[finixPaymentLinkId] = finixId
+            it[updatedAt] = System.now().toOffsetDateTime()
         } > 0
     }
 }

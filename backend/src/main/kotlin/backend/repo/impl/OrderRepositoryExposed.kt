@@ -64,19 +64,22 @@ class OrderRepositoryExposed : OrderRepository {
     }
 
     override fun cancel(id: String): Boolean = transaction {
-        val current = Orders
+        val row = Orders
             .selectAll()
             .where { Orders.id eq id }
             .limit(1)
-            .singleOrNull() ?: return@transaction false
+            .singleOrNull()
+            ?: return@transaction false
 
-        val status = current[Orders.status].lowercase()
-        if (status == "captured" || status == "failed" || status == "canceled") {
-            return@transaction false
+        val status = row[Orders.status].lowercase()
+
+        when (status) {
+            "captured" -> return@transaction false
+            "failed", "canceled", "cancelled" -> return@transaction true
         }
 
         Orders.update({ Orders.id eq id }) {
-            it[Orders.status] = "canceled"
+            it[Orders.status] = "failed" // terminal for Android polling
         } > 0
     }
 }
