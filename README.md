@@ -1,73 +1,73 @@
-
 # QuickPay  
-Android + Ktor Full-Stack Payments Demo
+Android + Ktor Payment Link System
 
-QuickPay is a full-stack fintech demo that models real-world payment link workflows similar to Stripe and Finix.  
-It showcases how a modern Android app and a Kotlin backend work together to create payment links, manage their lifecycle, and handle webhook-driven payment events.
+QuickPay is a full-stack payment link system that models how modern merchant platforms create, track, and resolve payments using hosted checkout flows.
 
-This project is designed to be portfolio-grade, focusing on realistic payment states, backend correctness, and a clean merchant-style UI.
+The project focuses on payment lifecycle correctness, state-driven UI, and backend-authoritative order management, similar to systems used by fintech providers such as Finix or Stripe.
+
+This repository demonstrates how an Android client and a Kotlin backend coordinate around payment links, QR-based checkout, webhooks, and terminal payment states.
 
 ---
 
-## Key Highlights
+## Overview
 
-- End-to-end payment link creation
-- QR-based checkout flow
-- Webhook-driven payment state transitions
-- Cancel payment functionality
-- Terminal vs active payment states
-- Transaction history with Toronto timezone timestamps
-- Clean fintech-style UI with status badges and cards
+QuickPay supports creating hosted payment links that can be shared via QR code or URL.  
+Payments are completed externally, while the system tracks status transitions internally and reflects them back to the merchant interface.
+
+The design prioritizes:
+- Clear payment state modeling
+- Webhook-driven backend logic
+- Explicit terminal states
+- A clean, merchant-facing UI
 
 ---
 
 ## Screenshots
 
-> Screenshots are organized in the `screenshots/` directory.
+> Screenshots represent real application states from the merchant interface.
 
-### Create Payment
+### Payment Creation
 <p>
   <img src="screenshots/create_payment_empty.png" width="280" />
   <img src="screenshots/create_payment_filled.png" width="280" />
 </p>
 
-### Active Payment Link (Pending)
+### Active Payment Link
 <p>
   <img src="screenshots/payment_pending.png" width="320" />
 </p>
 
-### Payment Successful
+### Payment Completed
 <p>
   <img src="screenshots/payment_paid.png" width="320" />
 </p>
 
-### Cancelled Payment
+### Payment Cancelled
 <p>
   <img src="screenshots/payment_cancelled.png" width="320" />
 </p>
 
-### Payment History
+### Transaction History
 <p>
   <img src="screenshots/payment_history.png" width="360" />
 </p>
 
 ---
 
-## Features
+## Core Capabilities
 
 ### Payment Link Creation
-- Merchant enters amount, currency, description, and optional note
-- Backend creates a hosted payment link and order record
-- QR code is generated for in-person or remote checkout
+- Merchant defines amount, currency, description, and optional reference
+- Backend creates a hosted payment link and persists an order record
+- QR code and checkout URL are generated for customer use
 
-### QR-Based Checkout
-- Customer completes payment via hosted checkout page
-- Android app never handles sensitive payment data
+### Hosted Checkout
+- Payments are completed outside the Android app
+- No sensitive payment data is handled by the client
+- Android acts as a merchant control surface, not a payment processor
 
-### Webhook-Driven State Management
-- Backend processes payment provider webhooks
-- Order states updated authoritatively on the server
-- Android reflects backend state via polling
+### Payment State Management
+All payment states are controlled by the backend and updated via webhook events.
 
 Supported states:
 - CREATED
@@ -76,14 +76,17 @@ Supported states:
 - FAILED
 - CANCELLED
 
+Terminal states (CAPTURED, FAILED, CANCELLED) are immutable.
+
 ### Cancel Payment Flow
-- Merchant can cancel active payment links
-- Cancelled payments are terminal and immutable
+- Active payment links can be cancelled by the merchant
+- Cancellation invalidates the hosted checkout link
+- Cancelled payments remain visible for audit and history
 
 ### Transaction History
-- Chronological list of recent transactions
-- Status badges (Created, Captured, Failed, Cancelled)
-- Amount, receipt reference, and timestamp (America/Toronto)
+- Chronological list of payment attempts
+- Displays amount, currency, reference, status, and timestamp
+- Timestamps are rendered in America/Toronto timezone
 
 ---
 
@@ -109,41 +112,41 @@ Supported states:
 
 ---
 
-## Architecture Overview
+## Architecture
 
 ```
-Android App
-   |
-   | REST APIs
-   v
+Android Client
+     |
+     | REST API
+     v
 Ktor Backend
-   |
-   | Webhooks
-   v
+     |
+     | Webhooks
+     v
 Payment Provider
 ```
 
-### Design Principles
+### Architectural Principles
 - Backend is the single source of truth
-- Webhooks drive all final payment outcomes
-- Terminal states are immutable
-- UI reflects backend state only
+- Payment outcomes are webhook-driven
+- Client state is derived, never assumed
+- Terminal states cannot be reversed
 
 ---
 
-## API Overview
+## API Surface (High Level)
 
-| Method | Endpoint | Description |
-|------|--------|------------|
+| Method | Endpoint | Purpose |
+|------|---------|---------|
 | POST | /v1/links | Create payment link |
-| GET | /v1/orders/{id} | Fetch order status |
+| GET | /v1/orders/{id} | Retrieve order state |
 | GET | /v1/orders | List recent orders |
-| POST | /v1/links/{id}/cancel | Cancel payment link |
-| POST | /v1/webhooks | Receive payment provider webhooks |
+| POST | /v1/links/{id}/cancel | Cancel active link |
+| POST | /v1/webhooks | Process payment events |
 
 ---
 
-## Running the Project
+## Running Locally
 
 ### Backend
 ```bash
@@ -151,30 +154,35 @@ cd backend
 ./gradlew run
 ```
 
-Server runs at:
+Runs on:
 ```
 http://127.0.0.1:8080
 ```
 
 ### Android
-- Open `android/` in Android Studio
-- Use emulator base URL:
+- Open android/ in Android Studio
+- Emulator base URL:
 ```
 http://10.0.2.2:8080
 ```
 
 ---
 
-## Project Status
+## Project Direction
 
-QuickPay is an actively evolving fintech demo intended for portfolio and recruiter review.  
-It emphasizes realistic payment modeling, backend reliability, and clean Android architecture.
+QuickPay is structured as a production-style payment system intended for portfolio and technical review.
+
+The emphasis is on:
+- Payment lifecycle modeling
+- Backend authority and correctness
+- Clear merchant-facing UX
+- Realistic constraints and trade-offs
 
 ---
 
-## Roadmap
+## Planned Enhancements
 
 - Webhook signature verification
 - Background reconciliation jobs
-- Merchant analytics dashboard
-- Improved logging and observability
+- Analytics and reporting endpoints
+- Improved observability and structured logging
