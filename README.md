@@ -22,6 +22,24 @@ The design prioritizes:
 
 ---
 
+## Engineering Article
+
+A detailed breakdown of the system architecture and design decisions behind QuickPay is available here:
+
+**Designing a Payment Link System: Building a Merchant Android App Around Backend Truth**
+
+[https://medium.com/@nikunjpatel/designing-a-payment-link-system-building-a-merchant-android-app-around-backend-truth](https://medium.com/@nikunjpatel1905/designing-a-payment-link-system-building-a-merchant-android-app-around-backend-truth-c58a245765fe)
+
+The article explains:
+
+- Why the backend is treated as the source of truth
+- How webhook-driven payment confirmation works
+- Payment lifecycle modeling and terminal states
+- Android UI design for asynchronous payment systems
+- Trade-offs involved in polling vs push updates
+
+---
+
 ## Screenshots
 
 > Screenshots represent real application states from the merchant interface.
