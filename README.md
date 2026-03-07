@@ -7,6 +7,9 @@ The project focuses on payment lifecycle correctness, state-driven UI, and backe
 
 This repository demonstrates how an Android client and a Kotlin backend coordinate around payment links, QR-based checkout, webhooks, and terminal payment states.
 
+Read the engineering breakdown of this project on Medium:  
+[https://medium.com/@nikunjpatel/designing-a-payment-link-system-building-a-merchant-android-app-around-backend-truth](https://medium.com/@nikunjpatel1905/designing-a-payment-link-system-building-a-merchant-android-app-around-backend-truth-c58a245765fe)
+
 ---
 
 ## Overview
@@ -19,24 +22,6 @@ The design prioritizes:
 - Webhook-driven backend logic
 - Explicit terminal states
 - A clean, merchant-facing UI
-
----
-
-## Engineering Article
-
-A detailed breakdown of the system architecture and design decisions behind QuickPay is available here:
-
-**Designing a Payment Link System: Building a Merchant Android App Around Backend Truth**
-
-[https://medium.com/@nikunjpatel/designing-a-payment-link-system-building-a-merchant-android-app-around-backend-truth](https://medium.com/@nikunjpatel1905/designing-a-payment-link-system-building-a-merchant-android-app-around-backend-truth-c58a245765fe)
-
-The article explains:
-
-- Why the backend is treated as the source of truth
-- How webhook-driven payment confirmation works
-- Payment lifecycle modeling and terminal states
-- Android UI design for asynchronous payment systems
-- Trade-offs involved in polling vs push updates
 
 ---
 
